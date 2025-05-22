@@ -1,0 +1,21 @@
+# Prevent direct access to files
+<FilesMatch "(?i)((\.tpl|\.ini|\.log|(?<!robots)\.txt))">
+ Require all denied
+</FilesMatch>
+
+# Redirect to admin login
+DirectoryIndex index.php
+
+# Enable rewrite engine
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Redirect if trying to access admin directory directly
+    RewriteCond %{THE_REQUEST} /admin/index\.php [NC]
+    RewriteRule ^index\.php$ - [L]
+    
+    # Redirect all other requests to index.php
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule . index.php [L]
+</IfModule>

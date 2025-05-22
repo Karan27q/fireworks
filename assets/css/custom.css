@@ -1,0 +1,9 @@
+:root {
+  --primary-color: #4caf50;
+  --secondary-color: #ff6b00;
+}
+
+.main-nav { background-color: var(--primary-color); }
+.btn-primary, .search-btn { background-color: var(--primary-color); }
+.btn-primary:hover, .search-btn:hover { background-color: var(--secondary-color); }
+.top-bar { background-color: var(--secondary_color); }

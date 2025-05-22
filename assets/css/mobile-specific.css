@@ -1,0 +1,491 @@
+/**
+ * Mobile-specific styles for Vamsi Crackers E-commerce Platform
+ * These styles are loaded only on mobile devices to reduce bandwidth
+ */
+
+/* Mobile-specific utility classes */
+.mobile-only {
+  display: block;
+}
+
+.desktop-only {
+  display: none;
+}
+
+/* Mobile-specific animations - lighter and more performant */
+@keyframes mobile-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes mobile-slide-up {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Mobile-optimized buttons with larger touch targets */
+.mobile-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  text-align: center;
+  transition: background-color 0.2s, transform 0.1s;
+  touch-action: manipulation;
+}
+
+.mobile-btn:active {
+  transform: translateY(1px);
+}
+
+/* Mobile-specific card styles with better touch feedback */
+.mobile-card {
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 15px;
+  background-color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+}
+
+.mobile-card.touch-active {
+  background-color: #f9f9f9;
+}
+
+/* Mobile-specific form elements */
+.mobile-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 15px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background-color: #fff;
+  transition: border-color 0.2s;
+}
+
+.mobile-input:focus {
+  border-color: #ff6b6b;
+  outline: none;
+}
+
+.input-focused {
+  position: relative;
+}
+
+.input-focused::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: #ff6b6b;
+  animation: mobile-fade-in 0.2s forwards;
+}
+
+/* Mobile-specific quantity inputs */
+.quantity-input.mobile {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.quantity-input.mobile button {
+  width: 44px;
+  height: 44px;
+  background-color: #f5f5f5;
+  border: none;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quantity-input.mobile input {
+  width: 50px;
+  height: 44px;
+  border: none;
+  text-align: center;
+  font-size: 16px;
+}
+
+/* Mobile-specific swipe actions */
+.cart-item {
+  position: relative;
+  transition: transform 0.3s ease;
+}
+
+.cart-item.swiped {
+  transform: translateX(-80px);
+}
+
+.cart-item-delete {
+  position: absolute;
+  top: 0;
+  right: -80px;
+  width: 80px;
+  height: 100%;
+  background-color: #ff6b6b;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Mobile-specific product gallery */
+.mobile-product-gallery {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.mobile-product-gallery-inner {
+  display: flex;
+  transition: transform 0.3s ease;
+}
+
+.mobile-product-gallery-item {
+  flex: 0 0 100%;
+  position: relative;
+}
+
+.mobile-product-gallery-item img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.mobile-product-gallery-dots {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.mobile-product-gallery-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #ddd;
+  margin: 0 4px;
+}
+
+.mobile-product-gallery-dot.active {
+  background-color: #ff6b6b;
+}
+
+/* Mobile-specific checkout steps */
+.mobile-checkout-steps {
+  display: flex;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+}
+
+.mobile-checkout-steps::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.mobile-checkout-step {
+  flex: 0 0 auto;
+  padding: 10px 20px;
+  margin-right: 10px;
+  background-color: #f5f5f5;
+  border-radius: 20px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.mobile-checkout-step.active {
+  background-color: #ff6b6b;
+  color: white;
+}
+
+/* Mobile-specific bottom sheet */
+.mobile-bottom-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #fff;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.mobile-bottom-sheet.active {
+  transform: translateY(0);
+}
+
+.mobile-bottom-sheet-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mobile-bottom-sheet-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.mobile-bottom-sheet-close {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: #f5f5f5;
+}
+
+.mobile-bottom-sheet-content {
+  padding: 20px;
+}
+
+/* Mobile-specific filter UI */
+.mobile-filter-button {
+  position: fixed;
+  bottom: 70px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: #ff6b6b;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  z-index: 99;
+}
+
+.mobile-filter-button i {
+  font-size: 24px;
+}
+
+.mobile-filter-options {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.mobile-filter-option {
+  padding: 15px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.mobile-filter-option-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mobile-filter-option-title {
+  font-weight: 500;
+}
+
+.mobile-filter-option-content {
+  margin-top: 10px;
+  display: none;
+}
+
+.mobile-filter-option.active .mobile-filter-option-content {
+  display: block;
+  animation: mobile-slide-up 0.2s forwards;
+}
+
+/* Mobile-specific loading indicators */
+.mobile-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 0;
+}
+
+.mobile-loading-spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #ff6b6b;
+  border-radius: 50%;
+  animation: mobile-spin 1s linear infinite;
+}
+
+@keyframes mobile-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Mobile-specific toast notifications */
+.mobile-toast {
+  position: fixed;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 25px;
+  font-size: 14px;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.mobile-toast.active {
+  opacity: 1;
+}
+
+/* Mobile-specific pull-to-refresh */
+.pull-to-refresh {
+  position: relative;
+  overflow: hidden;
+}
+
+.pull-to-refresh-indicator {
+  position: absolute;
+  top: -50px;
+  left: 0;
+  right: 0;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.pull-to-refresh-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #ff6b6b;
+  border-radius: 50%;
+  animation: mobile-spin 1s linear infinite;
+}
+
+/* Mobile-specific empty states */
+.mobile-empty-state {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.mobile-empty-state-icon {
+  font-size: 48px;
+  color: #ddd;
+  margin-bottom: 15px;
+}
+
+.mobile-empty-state-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.mobile-empty-state-text {
+  font-size: 14px;
+  color: #777;
+  margin-bottom: 20px;
+}
+
+/* Mobile-specific offline indicator */
+.offline-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: #ff6b6b;
+  color: white;
+  text-align: center;
+  padding: 10px;
+  font-size: 14px;
+  z-index: 9999;
+  transform: translateY(-100%);
+  transition: transform 0.3s;
+}
+
+.offline-indicator.active {
+  transform: translateY(0);
+}
+
+/* Battery saving mode for low battery */
+@media (prefers-reduced-motion) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .mobile-card {
+    background-color: #222;
+    color: #fff;
+  }
+
+  .mobile-input {
+    background-color: #333;
+    border-color: #444;
+    color: #fff;
+  }
+
+  .mobile-checkout-step {
+    background-color: #333;
+    color: #ddd;
+  }
+
+  .mobile-bottom-sheet {
+    background-color: #222;
+    color: #fff;
+  }
+
+  .mobile-bottom-sheet-header {
+    border-bottom-color: #333;
+  }
+
+  .mobile-filter-option {
+    border-bottom-color: #333;
+  }
+
+  .mobile-toast {
+    background-color: rgba(255, 255, 255, 0.8);
+    color: #000;
+  }
+}
