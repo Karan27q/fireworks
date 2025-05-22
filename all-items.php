@@ -277,82 +277,68 @@ include 'includes/header.php';
                 <?php endif; ?>
             </div>
             
-            <!-- Products Grid -->
-            <div class="products-grid-container">
-                <div class="products-header">
-                    <div class="products-count">
-                        <p>Showing <?php echo min($total_items, $offset + 1); ?>-<?php echo min($total_items, $offset + $items_per_page); ?> of <?php echo $total_items; ?> products</p>
-                    </div>
-                    
-                    <?php if (!$isMobile): ?>
-                    <div class="sort-dropdown">
-                        <label for="sort-select">Sort By:</label>
-                        <select id="sort-select" class="form-select">
-                            <option value="default" <?php echo $sort == 'default' ? 'selected' : ''; ?>>Default</option>
-                            <option value="price_low" <?php echo $sort == 'price_low' ? 'selected' : ''; ?>>Price: Low to High</option>
-                            <option value="price_high" <?php echo $sort == 'price_high' ? 'selected' : ''; ?>>Price: High to Low</option>
-                            <option value="name_asc" <?php echo $sort == 'name_asc' ? 'selected' : ''; ?>>Name: A to Z</option>
-                            <option value="name_desc" <?php echo $sort == 'name_desc' ? 'selected' : ''; ?>>Name: Z to A</option>
-                            <option value="newest" <?php echo $sort == 'newest' ? 'selected' : ''; ?>>Newest First</option>
-                        </select>
-                    </div>
-                    <?php endif; ?>
-                </div>
-                
+            <!-- Products Display -->
+            <div class="products-grid">
                 <?php if (empty($products)): ?>
-                <div class="no-products">
-                    <i class="fas fa-search"></i>
-                    <h2>No products found</h2>
-                    <p>Try adjusting your filters or browse our other categories.</p>
-                    <a href="all-items.php" class="btn btn-primary">View All Products</a>
-                </div>
+                    <div class="no-products">
+                        <p>No products found in this category.</p>
+                    </div>
                 <?php else: ?>
-                <div class="products-grid <?php echo $isMobile ? 'mobile-products-grid' : ''; ?>">
                     <?php foreach ($products as $product): ?>
-                    <div class="product-card <?php echo $isMobile ? 'mobile-card' : ''; ?>">
-                        <a href="product-details.php?id=<?php echo $product['id']; ?>" class="product-card-link">
-                            <img src="uploads/products/<?php echo $product['image']; ?>" alt="<?php echo $product['name']; ?>" class="<?php echo $isMobile ? 'lazy-image' : ''; ?>" <?php echo $isMobile ? 'data-src="uploads/products/' . $product['image'] . '"' : ''; ?>>
-                            <h3><?php echo $product['name']; ?></h3>
-                            <p class="price">₹<?php echo $product['price']; ?></p>
-                        </a>
-                        <div class="product-card-actions">
-                            <a href="product-details.php?id=<?php echo $product['id']; ?>" class="view-btn">View Details</a>
-                            <button class="add-to-cart-btn" data-product-id="<?php echo $product['id']; ?>">Add to Cart</button>
+                        <div class="product-card">
+                            <div class="product-image">
+                                <img src="/uploads/products/<?php echo $product['image']; ?>" alt="<?php echo $product['name']; ?>">
+                            </div>
+                            <div class="product-info">
+                                <h3 class="product-name"><?php echo $product['name']; ?></h3>
+                                <p class="product-category"><?php echo $product['category_name']; ?></p>
+                                <?php if ($product['subcategory_name']): ?>
+                                    <p class="product-subcategory"><?php echo $product['subcategory_name']; ?></p>
+                                <?php endif; ?>
+                                <p class="product-price">₹<?php echo number_format($product['price'], 2); ?></p>
+                                <div class="product-stock">
+                                    <?php if ($product['stock_quantity'] > 0): ?>
+                                        <span class="in-stock">In Stock (<?php echo $product['stock_quantity']; ?>)</span>
+                                    <?php else: ?>
+                                        <span class="out-of-stock">Out of Stock</span>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="product-actions">
+                                    <a href="product-details.php?id=<?php echo $product['id']; ?>" class="btn btn-primary">View Details</a>
+                                    <?php if ($product['stock_quantity'] > 0): ?>
+                                        <button class="btn btn-secondary add-to-cart" data-product-id="<?php echo $product['id']; ?>">
+                                            Add to Cart
+                                        </button>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
                         </div>
-                    </div>
                     <?php endforeach; ?>
-                </div>
-                
-                <!-- Pagination -->
-                <?php if ($total_pages > 1): ?>
-                <div class="pagination <?php echo $isMobile ? 'mobile-pagination' : ''; ?>">
-                    <?php if ($page > 1): ?>
-                    <a href="<?php echo add_query_arg('page', $page - 1); ?>" class="pagination-prev">
-                        <i class="fas fa-chevron-left"></i> Previous
-                    </a>
-                    <?php endif; ?>
-                    
-                    <div class="pagination-numbers">
-                        <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                            <?php if ($i == 1 || $i == $total_pages || ($i >= $page - 2 && $i <= $page + 2)): ?>
-                                <a href="<?php echo add_query_arg('page', $i); ?>" class="pagination-number <?php echo $i == $page ? 'active' : ''; ?>">
-                                    <?php echo $i; ?>
-                                </a>
-                            <?php elseif ($i == $page - 3 || $i == $page + 3): ?>
-                                <span class="pagination-ellipsis">...</span>
-                            <?php endif; ?>
-                        <?php endfor; ?>
-                    </div>
-                    
-                    <?php if ($page < $total_pages): ?>
-                    <a href="<?php echo add_query_arg('page', $page + 1); ?>" class="pagination-next">
-                        Next <i class="fas fa-chevron-right"></i>
-                    </a>
-                    <?php endif; ?>
-                </div>
-                <?php endif; ?>
                 <?php endif; ?>
             </div>
+            
+            <!-- Pagination -->
+            <?php if ($total_pages > 1): ?>
+                <div class="pagination">
+                    <?php if ($page > 1): ?>
+                        <a href="?page=<?php echo ($page - 1); ?><?php echo $category_id ? '&category=' . $category_id : ''; ?><?php echo $subcategory_id ? '&subcategory=' . $subcategory_id : ''; ?><?php echo $sort ? '&sort=' . $sort : ''; ?>" class="page-link">
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </a>
+                    <?php endif; ?>
+                    
+                    <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                        <a href="?page=<?php echo $i; ?><?php echo $category_id ? '&category=' . $category_id : ''; ?><?php echo $subcategory_id ? '&subcategory=' . $subcategory_id : ''; ?><?php echo $sort ? '&sort=' . $sort : ''; ?>" class="page-link <?php echo $i == $page ? 'active' : ''; ?>">
+                            <?php echo $i; ?>
+                        </a>
+                    <?php endfor; ?>
+                    
+                    <?php if ($page < $total_pages): ?>
+                        <a href="?page=<?php echo ($page + 1); ?><?php echo $category_id ? '&category=' . $category_id : ''; ?><?php echo $subcategory_id ? '&subcategory=' . $subcategory_id : ''; ?><?php echo $sort ? '&sort=' . $sort : ''; ?>" class="page-link">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </a>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 </main>
@@ -404,7 +390,7 @@ include 'includes/header.php';
         }
         
         // Add to cart functionality
-        const addToCartButtons = document.querySelectorAll('.add-to-cart-btn');
+        const addToCartButtons = document.querySelectorAll('.add-to-cart');
         
         addToCartButtons.forEach(function(button) {
             button.addEventListener('click', function() {

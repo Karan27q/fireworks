@@ -435,6 +435,84 @@ ul {
   outline: none;
 }
 
+/* Product Visibility Section */
+.form-section {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.form-section h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    font-size: 1.2em;
+}
+
+.visibility-notice {
+    background: #e3f2fd;
+    border-left: 4px solid #2196f3;
+    padding: 12px 15px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.visibility-notice i {
+    color: #2196f3;
+    font-size: 1.2em;
+}
+
+.visibility-notice p {
+    margin: 0;
+    color: #1976d2;
+    font-size: 0.95em;
+}
+
+.visibility-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    cursor: pointer;
+    padding: 10px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.checkbox-label:hover {
+    background: #f1f3f5;
+    border-color: #adb5bd;
+}
+
+.checkbox-label input[type="checkbox"] {
+    margin-right: 10px;
+    margin-top: 3px;
+}
+
+.checkbox-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.checkbox-text i {
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.checkbox-text small {
+    color: #6c757d;
+    font-size: 0.85em;
+    margin-top: 3px;
+}
+
 /* Responsive */
 @media (max-width: 992px) {
   .stats-cards {

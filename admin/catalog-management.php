@@ -348,7 +348,7 @@ function displayCategoryTree($category_tree) {
             <td>{$category['display_order']}</td>
             <td>" . ($category['image'] ? "<img src='../{$category['image']}' width='50' height='50' alt='{$category['name']}'>" : 'No Image') . "</td>
             <td>
-                <button type='button' class='btn btn-primary btn-sm' onclick='editCategory({$category['id']}, \"{$category['name']}\", \"{$category['description']}\", {$category['parent_id'] ?? 'null'}, {$category['display_order']}, \"{$category['image']}\", {$category['is_featured']})'>Edit</button>
+                <button type='button' class='btn btn-primary btn-sm' onclick='editCategory({$category['id']}, \"{$category['name']}\", \"{$category['description']}\", " . ($category['parent_id'] !== null ? $category['parent_id'] : 'null') . ", {$category['display_order']}, \"{$category['image']}\", {$category['is_featured']})'>Edit</button>
                 <button type='button' class='btn btn-danger btn-sm' onclick='deleteCategory({$category['id']}, \"{$category['name']}\")'>Delete</button>
             </td>
         </tr>";
