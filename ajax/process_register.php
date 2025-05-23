@@ -1,7 +1,37 @@
 <?php
-require_once '../includes/db_connect.php';
-require_once '../includes/functions.php';
+// Prevent any output before JSON response
+ob_start();
 
+// Enable error reporting but log to file instead of output
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/../logs/php_errors.log');
+
+// Start session if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Log the start of the registration process
+error_log("Starting registration process");
+
+// Include required files
+$required_files = [
+    '../includes/db_connect.php',
+    '../includes/functions.php'
+];
+
+foreach ($required_files as $file) {
+    if (!file_exists($file)) {
+        error_log("Required file not found: $file");
+        echo json_encode(['success' => false, 'message' => 'System configuration error']);
+        exit;
+    }
+    require_once $file;
+}
+
+// Ensure we're sending JSON response
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -9,42 +39,42 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-// Get and sanitize input
-$first_name = filter_input(INPUT_POST, 'first_name', FILTER_SANITIZE_STRING);
-$last_name = filter_input(INPUT_POST, 'last_name', FILTER_SANITIZE_STRING);
-$email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
-$phone = filter_input(INPUT_POST, 'phone', FILTER_SANITIZE_STRING);
-$password = $_POST['password'] ?? '';
-$confirm_password = $_POST['confirm_password'] ?? '';
-$terms = isset($_POST['terms']) ? true : false;
-
-// Validate input
-if (empty($first_name) || empty($last_name) || empty($email) || empty($phone) || empty($password)) {
-    echo json_encode(['success' => false, 'message' => 'All fields are required']);
-    exit;
-}
-
-if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    echo json_encode(['success' => false, 'message' => 'Please enter a valid email address']);
-    exit;
-}
-
-if (strlen($password) < 8) {
-    echo json_encode(['success' => false, 'message' => 'Password must be at least 8 characters long']);
-    exit;
-}
-
-if ($password !== $confirm_password) {
-    echo json_encode(['success' => false, 'message' => 'Passwords do not match']);
-    exit;
-}
-
-if (!$terms) {
-    echo json_encode(['success' => false, 'message' => 'You must agree to the terms and conditions']);
-    exit;
-}
-
 try {
+    // Log POST data
+    error_log("Registration POST data: " . print_r($_POST, true));
+
+    // Get and sanitize input
+    $name = filter_input(INPUT_POST, 'name', FILTER_SANITIZE_STRING);
+    $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
+    $phone = filter_input(INPUT_POST, 'phone', FILTER_SANITIZE_STRING);
+    $password = $_POST['password'] ?? '';
+    $confirm_password = $_POST['confirm_password'] ?? '';
+    $terms = isset($_POST['terms']) ? true : false;
+
+    // Log sanitized data
+    error_log("Sanitized data - Name: $name, Email: $email, Phone: $phone");
+
+    // Validate input
+    if (!$name || !$email || !$phone || !$password || !$confirm_password) {
+        echo json_encode(['success' => false, 'message' => 'Please fill in all required fields']);
+        exit;
+    }
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        echo json_encode(['success' => false, 'message' => 'Please enter a valid email address']);
+        exit;
+    }
+
+    if ($password !== $confirm_password) {
+        echo json_encode(['success' => false, 'message' => 'Passwords do not match']);
+        exit;
+    }
+
+    if (!$terms) {
+        echo json_encode(['success' => false, 'message' => 'Please accept the terms and conditions']);
+        exit;
+    }
+
     // Check if email already exists
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE email = ?");
     $stmt->execute([$email]);
@@ -56,36 +86,48 @@ try {
     // Hash password
     $hashed_password = password_hash($password, PASSWORD_DEFAULT);
     
-    // Generate verification token
-    $verification_token = bin2hex(random_bytes(32));
-    
     // Insert new user
     $stmt = $pdo->prepare("
-        INSERT INTO users (first_name, last_name, email, phone, password, verification_token, status, created_at) 
-        VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())
+        INSERT INTO users (name, email, phone, password, status, created_at) 
+        VALUES (?, ?, ?, ?, 'active', NOW())
     ");
     
-    $stmt->execute([$first_name, $last_name, $email, $phone, $hashed_password, $verification_token]);
+    $stmt->execute([$name, $email, $phone, $hashed_password]);
     $user_id = $pdo->lastInsertId();
     
-    // Create customer record
-    $stmt = $pdo->prepare("
-        INSERT INTO customers (user_id, first_name, last_name, email, phone, created_at) 
-        VALUES (?, ?, ?, ?, ?, NOW())
-    ");
+    error_log("User registered successfully with ID: $user_id");
     
-    $stmt->execute([$user_id, $first_name, $last_name, $email, $phone]);
+    // Add welcome loyalty points if enabled
+    $stmt = $pdo->prepare("SELECT welcome_points, enabled FROM loyalty_settings WHERE id = 1");
+    $stmt->execute();
+    $loyalty_settings = $stmt->fetch(PDO::FETCH_ASSOC);
     
-    // Send verification email (in a real application)
-    // sendVerificationEmail($email, $verification_token);
+    if ($loyalty_settings && $loyalty_settings['enabled'] && $loyalty_settings['welcome_points'] > 0) {
+        // Add points to user
+        $stmt = $pdo->prepare("UPDATE users SET loyalty_points = loyalty_points + ? WHERE id = ?");
+        $stmt->execute([$loyalty_settings['welcome_points'], $user_id]);
+        
+        // Record transaction
+        $stmt = $pdo->prepare("
+            INSERT INTO loyalty_transactions (user_id, points, transaction_type, description, created_at)
+            VALUES (?, ?, 'earn', 'Welcome bonus points', NOW())
+        ");
+        $stmt->execute([$user_id, $loyalty_settings['welcome_points']]);
+        
+        error_log("Added welcome points to user ID: $user_id");
+    }
     
-    // For demo purposes, auto-verify the account
-    $stmt = $pdo->prepare("UPDATE users SET status = 'active', email_verified_at = NOW() WHERE id = ?");
-    $stmt->execute([$user_id]);
+    // Clear any output buffers
+    ob_end_clean();
     
     echo json_encode(['success' => true, 'message' => 'Registration successful! You can now login.']);
     
 } catch (PDOException $e) {
-    error_log("Registration error: " . $e->getMessage());
+    error_log("Registration PDO error: " . $e->getMessage());
+    ob_end_clean();
+    echo json_encode(['success' => false, 'message' => 'An error occurred. Please try again.']);
+} catch (Exception $e) {
+    error_log("Registration general error: " . $e->getMessage());
+    ob_end_clean();
     echo json_encode(['success' => false, 'message' => 'An error occurred. Please try again.']);
 }

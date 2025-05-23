@@ -25,8 +25,21 @@ CREATE TABLE IF NOT EXISTS users (
     state VARCHAR(100) DEFAULT NULL,
     pincode VARCHAR(20) DEFAULT NULL,
     wallet_balance DECIMAL(10, 2) DEFAULT 0.00,
+    loyalty_points INT DEFAULT 0,
+    status ENUM('active', 'inactive', 'blocked') NOT NULL DEFAULT 'active',
+    last_login DATETIME DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Create remember_tokens table
+CREATE TABLE IF NOT EXISTS remember_tokens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    token VARCHAR(255) NOT NULL,
+    expires DATETIME NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- Create categories table

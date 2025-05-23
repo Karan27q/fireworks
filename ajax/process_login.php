@@ -1,6 +1,5 @@
 <?php
 require_once '../includes/db_connect.php';
-require_once '../includes/functions.php';
 session_start();
 
 header('Content-Type: application/json');
@@ -10,55 +9,63 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$email = isset($_POST['email']) ? trim($_POST['email']) : '';
-$password = isset($_POST['password']) ? $_POST['password'] : '';
+$email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
+$password = $_POST['password'];
 $remember = isset($_POST['remember']) ? true : false;
 
-if (empty($email) || empty($password)) {
-    echo json_encode(['success' => false, 'message' => 'Please enter both email and password']);
+if (!$email || !$password) {
+    echo json_encode(['success' => false, 'message' => 'Please fill in all fields']);
     exit;
 }
 
-// Sanitize email
-$email = mysqli_real_escape_string($conn, $email);
+try {
+    // Get user from database
+    $stmt = $pdo->prepare("SELECT id, name, email, password, status FROM users WHERE email = ?");
+    $stmt->execute([$email]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// Get user from database
-$query = "SELECT id, email, password, name FROM users WHERE email = '$email' AND active = 1 LIMIT 1";
-$result = mysqli_query($conn, $query);
+    if (!$user) {
+        echo json_encode(['success' => false, 'message' => 'Invalid email or password']);
+        exit;
+    }
 
-if (!$result) {
-    echo json_encode(['success' => false, 'message' => 'Database error: ' . mysqli_error($conn)]);
-    exit;
-}
+    // Check if account is active
+    if ($user['status'] !== 'active') {
+        echo json_encode(['success' => false, 'message' => 'Your account is not active. Please contact support.']);
+        exit;
+    }
 
-if (mysqli_num_rows($result) === 0) {
-    echo json_encode(['success' => false, 'message' => 'Invalid email or password']);
-    exit;
-}
+    // Verify password
+    if (!password_verify($password, $user['password'])) {
+        echo json_encode(['success' => false, 'message' => 'Invalid email or password']);
+        exit;
+    }
 
-$user = mysqli_fetch_assoc($result);
-
-// Verify password
-if (password_verify($password, $user['password'])) {
     // Set session variables
     $_SESSION['user_id'] = $user['id'];
-    $_SESSION['user_email'] = $user['email'];
     $_SESSION['user_name'] = $user['name'];
-    
+    $_SESSION['user_email'] = $user['email'];
+
+    // Update last login
+    $stmt = $pdo->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
+    $stmt->execute([$user['id']]);
+
     // Set remember me cookie if requested
     if ($remember) {
         $token = bin2hex(random_bytes(32));
-        $expires = time() + (30 * 24 * 60 * 60); // 30 days
+        $expires = date('Y-m-d H:i:s', time() + (30 * 24 * 60 * 60)); // 30 days
         
         // Store token in database
-        $query = "INSERT INTO user_tokens (user_id, token, expires_at) VALUES ({$user['id']}, '$token', FROM_UNIXTIME($expires))";
-        mysqli_query($conn, $query);
+        $stmt = $pdo->prepare("INSERT INTO remember_tokens (user_id, token, expires) VALUES (?, ?, ?)");
+        $stmt->execute([$user['id'], $token, $expires]);
         
         // Set cookie
-        setcookie('remember_token', $token, $expires, '/', '', true, true);
+        setcookie('remember_token', $token, time() + (30 * 24 * 60 * 60), '/', '', true, true);
     }
+
+    echo json_encode(['success' => true]);
     
-    echo json_encode(['success' => true, 'message' => 'Login successful']);
-} else {
-    echo json_encode(['success' => false, 'message' => 'Invalid email or password']);
+} catch (PDOException $e) {
+    error_log("Login error: " . $e->getMessage());
+    echo json_encode(['success' => false, 'message' => 'An error occurred. Please try again.']);
 }

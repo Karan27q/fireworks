@@ -1,0 +1,19 @@
+[23-May-2025 13:28:27 Europe/Berlin] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in C:\xampp\htdocs\fe\ajax\process_register.php on line 12
+[23-May-2025 13:28:27 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='C:\xampp\php\PEAR') in C:\xampp\htdocs\fe\ajax\process_register.php:12
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\fe\ajax\process_register.php on line 12
+[23-May-2025 13:30:04 Europe/Berlin] Starting registration process
+[23-May-2025 13:30:04 Europe/Berlin] Registration POST data: Array
+(
+    [name] => karan
+    [email] => karans8807@gmail.com
+    [phone] => 08807477423
+    [password] => qwert123$
+    [confirm_password] => qwert123$
+    [terms] => on
+)
+
+[23-May-2025 13:30:04 Europe/Berlin] Sanitized data - Name: karan, Email: karans8807@gmail.com, Phone: 08807477423
+[23-May-2025 13:30:04 Europe/Berlin] User registered successfully with ID: 1
+[23-May-2025 13:30:04 Europe/Berlin] Added welcome points to user ID: 1

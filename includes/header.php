@@ -1,11 +1,54 @@
+<?php
+require_once 'db_connect.php';
+require_once 'session_handler.php';
+
+// Get site settings
+$settings_query = "SELECT * FROM site_settings WHERE id = 1";
+$settings_result = mysqli_query($conn, $settings_query);
+$settings = mysqli_fetch_assoc($settings_result);
+
+// Get site options
+$options_query = "SELECT * FROM site_options";
+$options_result = mysqli_query($conn, $options_query);
+$site_options = [];
+while ($option = mysqli_fetch_assoc($options_result)) {
+    $site_options[$option['option_name']] = $option['option_value'];
+}
+
+// Set default values if options don't exist
+$site_options['site_name'] = $site_options['site_name'] ?? 'Your Store Name';
+$site_options['site_description'] = $site_options['site_description'] ?? 'Your Store Description';
+$site_options['currency'] = $site_options['currency'] ?? '₹';
+$site_options['min_purchase'] = $site_options['min_purchase'] ?? '500';
+$site_options['service_area'] = $site_options['service_area'] ?? 'Entire INDIA including North Eastern States';
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fireworks Store</title>
-    <link rel="stylesheet" href="assets/css/custom.css">
+    <title><?php echo isset($page_title) ? $page_title . ' - ' . $site_options['site_name'] : $site_options['site_name']; ?></title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link href="assets/css/style.css" rel="stylesheet">
+    
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #0056b3;
+        }
+
         body {
             margin: 0;
             font-family: sans-serif;
@@ -223,12 +266,6 @@
     </style>
 </head>
 <body>
-    <?php
-    // Get site settings
-    $settings_query = "SELECT * FROM site_settings WHERE id = 1";
-    $settings_result = mysqli_query($conn, $settings_query);
-    $settings = mysqli_fetch_assoc($settings_result);
-    ?>
     <div class="top-bar">
         <?php echo $settings['header_top_bar_text'] ?? 'Central Government Approved License Seller'; ?> &nbsp; | &nbsp; GST included in product price &nbsp; <img src="assets/images/google-pay-logo.png" alt="Google Pay" style="height: 15px; vertical-align: middle;">
     </div>
@@ -243,10 +280,14 @@
                 <button>Search</button>
             </div>
             <div class="secondary-nav">
-                <a href="#">Track Order</a>
-                <a href="#">Combo Products</a>
+                <a href="track-order.php">Track Order</a>
+                <a href="combo-products.php">Combo Products</a>
                 <a href="shipping-policy.php">Shipping Policy</a>
                 <?php if(isset($_SESSION['user_id'])): ?>
+                    <span class="me-3">Welcome, <?php echo htmlspecialchars($_SESSION['user_name']); ?></span>
+                    <?php if($_SESSION['user_role'] === 'admin'): ?>
+                        <a href="admin/">Admin Panel</a>
+                    <?php endif; ?>
                     <a href="profile.php">My Account</a>
                     <a href="logout.php">Logout</a>
                 <?php else: ?>
@@ -263,7 +304,7 @@
         <nav class="main-nav">
             <ul>
                 <li><a href="index.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>">HOME</a></li>
-                <li><a href="all-items.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'all-items.php' ? 'active' : ''; ?>">ALL ITEM</a></li>
+                <li><a href="products.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'products.php' ? 'active' : ''; ?>">ALL ITEMS</a></li>
                 <li><a href="#">NEW ARRIVALS</a></li>
                 <li><a href="#">QUICK SHOPPING</a></li>
                 <li><a href="about-us.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'about-us.php' ? 'active' : ''; ?>">ABOUT US</a></li>
@@ -272,5 +313,21 @@
             </ul>
         </nav>
     </header>
+
+    <!-- Main Content -->
+    <main class="main-content py-4">
+        <div class="container">
+            <?php if (isset($_SESSION['flash_message'])): ?>
+                <div class="alert alert-<?php echo $_SESSION['flash_type']; ?> alert-dismissible fade show">
+                    <?php 
+                    echo $_SESSION['flash_message'];
+                    unset($_SESSION['flash_message']);
+                    unset($_SESSION['flash_type']);
+                    ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            <?php endif; ?>
+        </div>
+    </main>
 </body>
 </html>
