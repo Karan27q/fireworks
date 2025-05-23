@@ -8,11 +8,15 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     exit;
 }
 
-$categoryId = $_GET['id'];
+$categoryId = (int)$_GET['id'];
 
 // Get category details
 $query = "SELECT * FROM categories WHERE id = $categoryId AND active = 1";
 $result = mysqli_query($conn, $query);
+
+if (!$result) {
+    die("Query failed: " . mysqli_error($conn));
+}
 
 // Check if category exists
 if (mysqli_num_rows($result) === 0) {
@@ -28,11 +32,21 @@ $pageTitle = $category['name'];
 // Get subcategories
 $subcategoriesQuery = "SELECT * FROM subcategories WHERE category_id = $categoryId AND active = 1 ORDER BY display_order ASC, name ASC";
 $subcategoriesResult = mysqli_query($conn, $subcategoriesQuery);
+
+if (!$subcategoriesResult) {
+    die("Subcategories query failed: " . mysqli_error($conn));
+}
+
 $subcategories = mysqli_fetch_all($subcategoriesResult, MYSQLI_ASSOC);
 
 // Get featured products from this category
 $featuredProductsQuery = "SELECT * FROM products WHERE category_id = $categoryId AND featured = 1 AND active = 1 ORDER BY display_order ASC LIMIT 8";
 $featuredProductsResult = mysqli_query($conn, $featuredProductsQuery);
+
+if (!$featuredProductsResult) {
+    die("Featured products query failed: " . mysqli_error($conn));
+}
+
 $featuredProducts = mysqli_fetch_all($featuredProductsResult, MYSQLI_ASSOC);
 
 // Check if mobile view
@@ -49,15 +63,15 @@ include 'includes/header.php';
 <main class="category-page">
     <div class="container">
         <div class="page-header">
-            <h1><?php echo $category['name']; ?></h1>
+            <h1><?php echo htmlspecialchars($category['name']); ?></h1>
             <div class="breadcrumb">
-                <a href="index.php">Home</a> &gt; <span><?php echo $category['name']; ?></span>
+                <a href="index.php">Home</a> &gt; <span><?php echo htmlspecialchars($category['name']); ?></span>
             </div>
         </div>
         
         <?php if($category['description']): ?>
         <div class="category-description">
-            <?php echo nl2br($category['description']); ?>
+            <?php echo nl2br(htmlspecialchars($category['description'])); ?>
         </div>
         <?php endif; ?>
         
@@ -68,10 +82,12 @@ include 'includes/header.php';
                 <?php foreach($subcategories as $subcategory): ?>
                 <div class="subcategory-card <?php echo $isMobile ? 'mobile-card' : ''; ?>">
                     <a href="products.php?subcategory=<?php echo $subcategory['id']; ?>">
-                        <?php if($subcategory['image']): ?>
-                        <img src="uploads/subcategories/<?php echo $subcategory['image']; ?>" alt="<?php echo $subcategory['name']; ?>" class="<?php echo $isMobile ? 'lazy-image' : ''; ?>" <?php echo $isMobile ? 'data-src="uploads/subcategories/' . $subcategory['image'] . '"' : ''; ?>>
+                        <?php if($subcategory['image'] && file_exists("uploads/subcategories/{$subcategory['image']}")): ?>
+                        <img src="uploads/subcategories/<?php echo htmlspecialchars($subcategory['image']); ?>" alt="<?php echo htmlspecialchars($subcategory['name']); ?>" class="<?php echo $isMobile ? 'lazy-image' : ''; ?>" <?php echo $isMobile ? 'data-src="uploads/subcategories/' . htmlspecialchars($subcategory['image']) . '"' : ''; ?>>
+                        <?php else: ?>
+                        <img src="uploads/subcategories/no-image.png" alt="No Image" class="<?php echo $isMobile ? 'lazy-image' : ''; ?>">
                         <?php endif; ?>
-                        <h3><?php echo $subcategory['name']; ?></h3>
+                        <h3><?php echo htmlspecialchars($subcategory['name']); ?></h3>
                     </a>
                 </div>
                 <?php endforeach; ?>
@@ -86,9 +102,13 @@ include 'includes/header.php';
                 <?php foreach($featuredProducts as $product): ?>
                 <div class="product-card <?php echo $isMobile ? 'mobile-card' : ''; ?>">
                     <a href="product-details.php?id=<?php echo $product['id']; ?>" class="product-card-link">
-                        <img src="uploads/products/<?php echo $product['image']; ?>" alt="<?php echo $product['name']; ?>" class="<?php echo $isMobile ? 'lazy-image' : ''; ?>" <?php echo $isMobile ? 'data-src="uploads/products/' . $product['image'] . '"' : ''; ?>>
-                        <h3><?php echo $product['name']; ?></h3>
-                        <p class="price">₹<?php echo $product['price']; ?></p>
+                        <?php if($product['image'] && file_exists("uploads/products/{$product['image']}")): ?>
+                        <img src="uploads/products/<?php echo htmlspecialchars($product['image']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="<?php echo $isMobile ? 'lazy-image' : ''; ?>" <?php echo $isMobile ? 'data-src="uploads/products/' . htmlspecialchars($product['image']) . '"' : ''; ?>>
+                        <?php else: ?>
+                        <img src="uploads/products/no-image.png" alt="No Image" class="<?php echo $isMobile ? 'lazy-image' : ''; ?>">
+                        <?php endif; ?>
+                        <h3><?php echo htmlspecialchars($product['name']); ?></h3>
+                        <p class="price">₹<?php echo number_format($product['price'], 2); ?></p>
                     </a>
                     <div class="product-card-actions">
                         <a href="product-details.php?id=<?php echo $product['id']; ?>" class="view-btn">View Details</a>
@@ -99,12 +119,12 @@ include 'includes/header.php';
             </div>
             
             <div class="view-all-link">
-                <a href="all-items.php?category=<?php echo $categoryId; ?>" class="btn btn-primary">View All Products in <?php echo $category['name']; ?></a>
+                <a href="products.php?category=<?php echo $categoryId; ?>" class="btn btn-primary">View All Products in <?php echo htmlspecialchars($category['name']); ?></a>
             </div>
         </div>
         <?php else: ?>
         <div class="view-all-link">
-            <a href="all-items.php?category=<?php echo $categoryId; ?>" class="btn btn-primary">View All Products in <?php echo $category['name']; ?></a>
+            <a href="products.php?category=<?php echo $categoryId; ?>" class="btn btn-primary">View All Products in <?php echo htmlspecialchars($category['name']); ?></a>
         </div>
         <?php endif; ?>
     </div>

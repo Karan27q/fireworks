@@ -6,6 +6,7 @@ $page_title = "Products";
 
 // Get category filter if provided
 $category_id = isset($_GET['category']) ? filter_input(INPUT_GET, 'category', FILTER_VALIDATE_INT) : null;
+$subcategory_id = isset($_GET['subcategory']) ? filter_input(INPUT_GET, 'subcategory', FILTER_VALIDATE_INT) : null;
 
 // Get search query if provided
 $search = isset($_GET['search']) ? filter_input(INPUT_GET, 'search', FILTER_SANITIZE_STRING) : null;
@@ -19,12 +20,18 @@ $items_per_page = 12;
 $offset = ($page - 1) * $items_per_page;
 
 // Build query
-$query = "SELECT p.*, c.name as category_name FROM products p 
+$query = "SELECT p.*, c.name as category_name, s.name as subcategory_name 
+          FROM products p 
           LEFT JOIN categories c ON p.category_id = c.id 
+          LEFT JOIN subcategories s ON p.subcategory_id = s.id 
           WHERE p.active = 1";
 
 if ($category_id) {
     $query .= " AND p.category_id = " . intval($category_id);
+}
+
+if ($subcategory_id) {
+    $query .= " AND p.subcategory_id = " . intval($subcategory_id);
 }
 
 if ($search) {
@@ -65,7 +72,7 @@ if (!$result) {
 $products = mysqli_fetch_all($result, MYSQLI_ASSOC);
 
 // Get total count for pagination
-$count_query = str_replace("SELECT p.*, c.name as category_name", "SELECT COUNT(*)", $query);
+$count_query = str_replace("SELECT p.*, c.name as category_name, s.name as subcategory_name", "SELECT COUNT(*)", $query);
 $count_query = preg_replace("/LIMIT \d+ OFFSET \d+/", "", $count_query);
 
 $count_result = mysqli_query($conn, $count_query);
@@ -86,194 +93,373 @@ if (!$categories_result) {
 
 $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
 
+// Get subcategories if category is selected
+$subcategories = [];
+if ($category_id) {
+    $subcategories_query = "SELECT * FROM subcategories WHERE category_id = " . intval($category_id) . " AND active = 1 ORDER BY name";
+    $subcategories_result = mysqli_query($conn, $subcategories_query);
+    if ($subcategories_result) {
+        $subcategories = mysqli_fetch_all($subcategories_result, MYSQLI_ASSOC);
+    }
+}
+
 include 'includes/header.php';
 ?>
 
-<div class="container my-5">
-    <h1 class="mb-4"><?php echo $page_title; ?></h1>
-    
-    <!-- Search and Filter -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <form action="products.php" method="get" class="d-flex">
+<div class="products-page">
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1><?php echo $page_title; ?></h1>
+            <div class="breadcrumb">
+                <a href="index.php">Home</a> / Products
                 <?php if ($category_id): ?>
-                    <input type="hidden" name="category" value="<?php echo $category_id; ?>">
+                    / <?php echo htmlspecialchars($categories[array_search($category_id, array_column($categories, 'id'))]['name']); ?>
                 <?php endif; ?>
-                <input type="text" name="search" class="form-control me-2" placeholder="Search products..." value="<?php echo htmlspecialchars($search ?? ''); ?>">
-                <button type="submit" class="btn btn-primary">Search</button>
-            </form>
-        </div>
-        <div class="col-md-6 d-flex justify-content-end">
-            <div class="dropdown">
-                <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="categoryDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    Categories
-                </button>
-                <ul class="dropdown-menu" aria-labelledby="categoryDropdown">
-                    <li><a class="dropdown-item <?php echo !$category_id ? 'active' : ''; ?>" href="products.php">All Categories</a></li>
-                    <?php foreach ($categories as $category): ?>
-                        <li><a class="dropdown-item <?php echo $category_id == $category['id'] ? 'active' : ''; ?>" href="products.php?category=<?php echo $category['id']; ?>"><?php echo htmlspecialchars($category['name']); ?></a></li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-            
-            <div class="dropdown ms-2">
-                <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    Sort By
-                </button>
-                <ul class="dropdown-menu" aria-labelledby="sortDropdown">
-                    <li><a class="dropdown-item <?php echo $sort == 'newest' ? 'active' : ''; ?>" href="?<?php echo http_build_query(array_merge($_GET, ['sort' => 'newest'])); ?>">Newest</a></li>
-                    <li><a class="dropdown-item <?php echo $sort == 'price_low' ? 'active' : ''; ?>" href="?<?php echo http_build_query(array_merge($_GET, ['sort' => 'price_low'])); ?>">Price: Low to High</a></li>
-                    <li><a class="dropdown-item <?php echo $sort == 'price_high' ? 'active' : ''; ?>" href="?<?php echo http_build_query(array_merge($_GET, ['sort' => 'price_high'])); ?>">Price: High to Low</a></li>
-                    <li><a class="dropdown-item <?php echo $sort == 'name_asc' ? 'active' : ''; ?>" href="?<?php echo http_build_query(array_merge($_GET, ['sort' => 'name_asc'])); ?>">Name: A to Z</a></li>
-                    <li><a class="dropdown-item <?php echo $sort == 'name_desc' ? 'active' : ''; ?>" href="?<?php echo http_build_query(array_merge($_GET, ['sort' => 'name_desc'])); ?>">Name: Z to A</a></li>
-                </ul>
             </div>
         </div>
-    </div>
-    
-    <?php if (empty($products)): ?>
-        <div class="alert alert-info">
-            No products found. Please try a different search or category.
+
+        <!-- Filters Section -->
+        <div class="filters-section">
+            <div class="row">
+                <div class="col-md-4">
+                    <form action="" method="get" class="search-form">
+                        <?php if ($category_id): ?>
+                            <input type="hidden" name="category" value="<?php echo $category_id; ?>">
+                        <?php endif; ?>
+                        <div class="input-group">
+                            <input type="text" name="search" class="form-control" placeholder="Search products..." value="<?php echo htmlspecialchars($search ?? ''); ?>">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-md-4">
+                    <div class="category-filter">
+                        <select name="category" class="form-select" onchange="this.form.submit()">
+                            <option value="">All Categories</option>
+                            <?php foreach ($categories as $category): ?>
+                                <option value="<?php echo $category['id']; ?>" <?php echo $category_id == $category['id'] ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($category['name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="sort-filter">
+                        <select name="sort" class="form-select" onchange="this.form.submit()">
+                            <option value="newest" <?php echo $sort == 'newest' ? 'selected' : ''; ?>>Newest</option>
+                            <option value="price_low" <?php echo $sort == 'price_low' ? 'selected' : ''; ?>>Price: Low to High</option>
+                            <option value="price_high" <?php echo $sort == 'price_high' ? 'selected' : ''; ?>>Price: High to Low</option>
+                            <option value="name_asc" <?php echo $sort == 'name_asc' ? 'selected' : ''; ?>>Name: A to Z</option>
+                            <option value="name_desc" <?php echo $sort == 'name_desc' ? 'selected' : ''; ?>>Name: Z to A</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
         </div>
-    <?php else: ?>
-        <!-- Products Grid -->
-        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4">
-            <?php foreach ($products as $product): ?>
-                <div class="col">
-                    <div class="card h-100 product-card">
-                        <img src="<?php echo !empty($product['image']) ? htmlspecialchars($product['image']) : 'assets/images/product-placeholder.jpg'; ?>" class="card-img-top" alt="<?php echo htmlspecialchars($product['name']); ?>">
-                        <div class="card-body">
-                            <h5 class="card-title"><?php echo htmlspecialchars($product['name']); ?></h5>
-                            <p class="card-text text-muted small"><?php echo htmlspecialchars($product['category_name']); ?></p>
-                            <p class="card-text"><?php echo htmlspecialchars(substr($product['description'], 0, 100)) . (strlen($product['description']) > 100 ? '...' : ''); ?></p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="price">$<?php echo number_format($product['price'], 2); ?></span>
-                                <?php if ($product['stock_quantity'] > 0): ?>
-                                    <span class="badge bg-success">In Stock</span>
-                                <?php else: ?>
-                                    <span class="badge bg-danger">Out of Stock</span>
-                                <?php endif; ?>
+
+        <?php if (empty($products)): ?>
+            <div class="alert alert-info">
+                No products found. Please try a different search or category.
+            </div>
+        <?php else: ?>
+            <!-- Products Grid -->
+            <div class="products-grid">
+                <?php foreach ($products as $product): ?>
+                    <div class="product-card">
+                        <div class="product-image">
+                            <?php if(!empty($product['image']) && file_exists("uploads/products/{$product['image']}")): ?>
+                                <img src="uploads/products/<?php echo $product['image']; ?>" alt="<?php echo htmlspecialchars($product['name']); ?>">
+                            <?php else: ?>
+                                <img src="uploads/products/no-image.png" alt="No Image">
+                            <?php endif; ?>
+                            <div class="product-overlay">
+                                <a href="product-details.php?id=<?php echo $product['id']; ?>" class="btn-quick-view">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <button class="btn-add-cart" data-product-id="<?php echo $product['id']; ?>">
+                                    <i class="fas fa-shopping-cart"></i>
+                                </button>
                             </div>
                         </div>
-                        <div class="card-footer bg-white border-top-0">
-                            <div class="d-grid gap-2">
-                                <a href="product-details.php?id=<?php echo $product['id']; ?>" class="btn btn-outline-primary">View Details</a>
-                                <?php if ($product['stock_quantity'] > 0): ?>
-                                    <button class="btn btn-primary add-to-cart" data-product-id="<?php echo $product['id']; ?>">Add to Cart</button>
-                                <?php else: ?>
-                                    <button class="btn btn-secondary" disabled>Out of Stock</button>
+                        <div class="product-info">
+                            <h3 class="product-title">
+                                <a href="product-details.php?id=<?php echo $product['id']; ?>">
+                                    <?php echo htmlspecialchars($product['name']); ?>
+                                </a>
+                            </h3>
+                            <div class="product-category">
+                                <?php echo htmlspecialchars($product['category_name'] ?? 'Uncategorized'); ?>
+                                <?php if(!empty($product['subcategory_name'])): ?>
+                                    <span class="subcategory">/ <?php echo htmlspecialchars($product['subcategory_name']); ?></span>
                                 <?php endif; ?>
+                            </div>
+                            <div class="product-price">
+                                ₹<?php echo number_format($product['price'], 2); ?>
                             </div>
                         </div>
                     </div>
+                <?php endforeach; ?>
+            </div>
+
+            <!-- Pagination -->
+            <?php if ($total_pages > 1): ?>
+                <div class="pagination">
+                    <?php
+                    $queryParams = [];
+                    if($category_id) $queryParams[] = "category=$category_id";
+                    if($subcategory_id) $queryParams[] = "subcategory=$subcategory_id";
+                    if($search) $queryParams[] = "search=" . urlencode($search);
+                    if($sort) $queryParams[] = "sort=$sort";
+                    
+                    // Previous page link
+                    if($page > 1) {
+                        $queryParams[] = "page=" . ($page - 1);
+                        echo '<a href="?' . implode('&', $queryParams) . '" class="pagination-link">&laquo; Previous</a>';
+                    }
+                    
+                    // Page links
+                    $startPage = max(1, $page - 2);
+                    $endPage = min($total_pages, $page + 2);
+                    
+                    for($i = $startPage; $i <= $endPage; $i++) {
+                        $queryParams = [];
+                        if($category_id) $queryParams[] = "category=$category_id";
+                        if($subcategory_id) $queryParams[] = "subcategory=$subcategory_id";
+                        if($search) $queryParams[] = "search=" . urlencode($search);
+                        if($sort) $queryParams[] = "sort=$sort";
+                        $queryParams[] = "page=$i";
+                        
+                        if($i == $page) {
+                            echo '<span class="pagination-link active">' . $i . '</span>';
+                        } else {
+                            echo '<a href="?' . implode('&', $queryParams) . '" class="pagination-link">' . $i . '</a>';
+                        }
+                    }
+                    
+                    // Next page link
+                    if($page < $total_pages) {
+                        $queryParams = [];
+                        if($category_id) $queryParams[] = "category=$category_id";
+                        if($subcategory_id) $queryParams[] = "subcategory=$subcategory_id";
+                        if($search) $queryParams[] = "search=" . urlencode($search);
+                        if($sort) $queryParams[] = "sort=$sort";
+                        $queryParams[] = "page=" . ($page + 1);
+                        echo '<a href="?' . implode('&', $queryParams) . '" class="pagination-link">Next &raquo;</a>';
+                    }
+                    ?>
                 </div>
-            <?php endforeach; ?>
-        </div>
-        
-        <!-- Pagination -->
-        <?php if ($total_pages > 1): ?>
-            <nav aria-label="Product pagination" class="mt-4">
-                <ul class="pagination justify-content-center">
-                    <?php if ($page > 1): ?>
-                        <li class="page-item">
-                            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page - 1])); ?>" aria-label="Previous">
-                                <span aria-hidden="true">&laquo;</span>
-                            </a>
-                        </li>
-                    <?php endif; ?>
-                    
-                    <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                        <li class="page-item <?php echo $page == $i ? 'active' : ''; ?>">
-                            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>"><?php echo $i; ?></a>
-                        </li>
-                    <?php endfor; ?>
-                    
-                    <?php if ($page < $total_pages): ?>
-                        <li class="page-item">
-                            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page + 1])); ?>" aria-label="Next">
-                                <span aria-hidden="true">&raquo;</span>
-                            </a>
-                        </li>
-                    <?php endif; ?>
-                </ul>
-            </nav>
+            <?php endif; ?>
         <?php endif; ?>
-    <?php endif; ?>
+    </div>
 </div>
 
-<script>
-$(document).ready(function() {
-    // Add to cart functionality
-    $('.add-to-cart').click(function() {
-        const productId = $(this).data('product-id');
-        const button = $(this);
-        
-        button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...');
-        
-        $.ajax({
-            type: 'POST',
-            url: 'ajax/add_to_cart.php',
-            data: { product_id: productId, quantity: 1 },
-            dataType: 'json',
-            success: function(response) {
-                if (response.success) {
-                    button.html('Added to Cart').removeClass('btn-primary').addClass('btn-success');
-                    // Update cart count in header
-                    $('#cart-count').text(response.cart_count);
-                    
-                    // Show toast notification
-                    const toast = `
-                        <div class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
-                            <div class="d-flex">
-                                <div class="toast-body">
-                                    <i class="bi bi-check-circle me-2"></i> ${response.message}
-                                </div>
-                                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                            </div>
-                        </div>
-                    `;
-                    
-                    $('.toast-container').append(toast);
-                    const toastEl = $('.toast').last();
-                    const bsToast = new bootstrap.Toast(toastEl, { delay: 3000 });
-                    bsToast.show();
-                    
-                    setTimeout(function() {
-                        button.html('Add to Cart').removeClass('btn-success').addClass('btn-primary').prop('disabled', false);
-                    }, 2000);
-                } else {
-                    button.html('Error').removeClass('btn-primary').addClass('btn-danger');
-                    setTimeout(function() {
-                        button.html('Add to Cart').removeClass('btn-danger').addClass('btn-primary').prop('disabled', false);
-                    }, 2000);
-                    
-                    // Show error toast
-                    const toast = `
-                        <div class="toast align-items-center text-white bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
-                            <div class="d-flex">
-                                <div class="toast-body">
-                                    <i class="bi bi-exclamation-circle me-2"></i> ${response.message}
-                                </div>
-                                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                            </div>
-                        </div>
-                    `;
-                    
-                    $('.toast-container').append(toast);
-                    const toastEl = $('.toast').last();
-                    const bsToast = new bootstrap.Toast(toastEl, { delay: 3000 });
-                    bsToast.show();
-                }
-            },
-            error: function() {
-                button.html('Error').removeClass('btn-primary').addClass('btn-danger');
-                setTimeout(function() {
-                    button.html('Add to Cart').removeClass('btn-danger').addClass('btn-primary').prop('disabled', false);
-                }, 2000);
-            }
-        });
-    });
-});
-</script>
+<style>
+.products-page {
+    padding: 40px 0;
+}
+
+.page-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.page-header h1 {
+    font-size: 2.5rem;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.breadcrumb {
+    color: #666;
+}
+
+.breadcrumb a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.filters-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+}
+
+.search-form .input-group {
+    width: 100%;
+}
+
+.search-form .form-control {
+    border-right: none;
+}
+
+.search-form .btn {
+    border-left: none;
+}
+
+.category-filter,
+.sort-filter {
+    width: 100%;
+}
+
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 30px;
+    margin-bottom: 40px;
+}
+
+.product-card {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    transition: transform 0.3s ease;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+}
+
+.product-image {
+    position: relative;
+    padding-top: 100%;
+    overflow: hidden;
+}
+
+.product-image img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.product-card:hover .product-image img {
+    transform: scale(1.1);
+}
+
+.product-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.product-card:hover .product-overlay {
+    opacity: 1;
+}
+
+.btn-quick-view,
+.btn-add-cart {
+    background: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-quick-view:hover,
+.btn-add-cart:hover {
+    background: #007bff;
+    color: white;
+}
+
+.product-info {
+    padding: 20px;
+}
+
+.product-title {
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+}
+
+.product-title a {
+    color: #333;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.product-title a:hover {
+    color: #007bff;
+}
+
+.product-category {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.subcategory {
+    color: #999;
+}
+
+.product-price {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #28a745;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    margin-top: 40px;
+}
+
+.pagination-link {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    color: #333;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.pagination-link:hover {
+    background-color: #f8f9fa;
+}
+
+.pagination-link.active {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+@media (max-width: 768px) {
+    .filters-section .row {
+        gap: 15px;
+    }
+    
+    .filters-section .col-md-4 {
+        width: 100%;
+    }
+    
+    .products-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 20px;
+    }
+}
+</style>
 
 <?php include 'includes/footer.php'; ?>

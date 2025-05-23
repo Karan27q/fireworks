@@ -245,6 +245,7 @@
             <div class="secondary-nav">
                 <a href="#">Track Order</a>
                 <a href="#">Combo Products</a>
+                <a href="shipping-policy.php">Shipping Policy</a>
                 <?php if(isset($_SESSION['user_id'])): ?>
                     <a href="profile.php">My Account</a>
                     <a href="logout.php">Logout</a>
@@ -266,7 +267,6 @@
                 <li><a href="#">NEW ARRIVALS</a></li>
                 <li><a href="#">QUICK SHOPPING</a></li>
                 <li><a href="about-us.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'about-us.php' ? 'active' : ''; ?>">ABOUT US</a></li>
-                <li><a href="#">SHIPPING POLICY</a></li>
                 <li><a href="payment.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'payment.php' ? 'active' : ''; ?>">PAYMENT DETAILS</a></li>
                 <li><a href="#">TESTIMONIAL</a></li>
             </ul>

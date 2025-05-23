@@ -54,11 +54,11 @@ if(isset($_GET['filter'])) {
     $filter = $_GET['filter'];
     
     if($filter === 'active') {
-        $whereClause = "WHERE active = 1";
+        $whereClause = "WHERE p.active = 1";
     } elseif($filter === 'inactive') {
-        $whereClause = "WHERE active = 0";
+        $whereClause = "WHERE p.active = 0";
     } elseif($filter === 'low_stock') {
-        $whereClause = "WHERE stock_quantity <= 10";
+        $whereClause = "WHERE p.stock_quantity <= 10";
     }
     
     $filterParams[] = "filter=$filter";
@@ -69,9 +69,9 @@ if(isset($_GET['search']) && !empty($_GET['search'])) {
     $search = mysqli_real_escape_string($conn, $_GET['search']);
     
     if(empty($whereClause)) {
-        $whereClause = "WHERE name LIKE '%$search%' OR description LIKE '%$search%'";
+        $whereClause = "WHERE p.name LIKE '%$search%' OR p.description LIKE '%$search%'";
     } else {
-        $whereClause .= " AND (name LIKE '%$search%' OR description LIKE '%$search%')";
+        $whereClause .= " AND (p.name LIKE '%$search%' OR p.description LIKE '%$search%')";
     }
     
     $filterParams[] = "search=$search";
@@ -82,19 +82,26 @@ if(isset($_GET['category']) && is_numeric($_GET['category'])) {
     $categoryId = (int)$_GET['category'];
     
     if(empty($whereClause)) {
-        $whereClause = "WHERE category_id = $categoryId";
+        $whereClause = "WHERE p.category_id = $categoryId";
     } else {
-        $whereClause .= " AND category_id = $categoryId";
+        $whereClause .= " AND p.category_id = $categoryId";
     }
     
     $filterParams[] = "category=$categoryId";
 }
 
 // Count total products
-$countQuery = "SELECT COUNT(*) as total FROM products $whereClause";
+$countQuery = "SELECT COUNT(*) as total FROM products p $whereClause";
 $countResult = mysqli_query($conn, $countQuery);
-$totalProducts = mysqli_fetch_assoc($countResult)['total'];
-$totalPages = ceil($totalProducts / $limit);
+
+if (!$countResult) {
+    $errorMessage = "Database error: " . mysqli_error($conn);
+    $totalProducts = 0;
+    $totalPages = 0;
+} else {
+    $totalProducts = mysqli_fetch_assoc($countResult)['total'];
+    $totalPages = ceil($totalProducts / $limit);
+}
 
 // Get products
 $productsQuery = "SELECT p.*, c.name as category_name 
@@ -104,12 +111,24 @@ $productsQuery = "SELECT p.*, c.name as category_name
                  ORDER BY p.id DESC 
                  LIMIT $offset, $limit";
 $productsResult = mysqli_query($conn, $productsQuery);
-$products = mysqli_fetch_all($productsResult, MYSQLI_ASSOC);
+
+if (!$productsResult) {
+    $errorMessage = "Database error: " . mysqli_error($conn);
+    $products = [];
+} else {
+    $products = mysqli_fetch_all($productsResult, MYSQLI_ASSOC);
+}
 
 // Get all categories for filter dropdown
 $categoriesQuery = "SELECT * FROM categories ORDER BY name ASC";
 $categoriesResult = mysqli_query($conn, $categoriesQuery);
-$categories = mysqli_fetch_all($categoriesResult, MYSQLI_ASSOC);
+
+if (!$categoriesResult) {
+    $errorMessage = "Database error: " . mysqli_error($conn);
+    $categories = [];
+} else {
+    $categories = mysqli_fetch_all($categoriesResult, MYSQLI_ASSOC);
+}
 ?>
 
 <!DOCTYPE html>
@@ -120,6 +139,227 @@ $categories = mysqli_fetch_all($categoriesResult, MYSQLI_ASSOC);
     <title>Products - Admin Panel</title>
     <link rel="stylesheet" href="assets/css/admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .admin-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            margin-left: 250px;
+            transition: margin-left 0.3s;
+        }
+
+        .main-content.sidebar-collapsed {
+            margin-left: 60px;
+        }
+
+        .content-wrapper {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .content-header h1 {
+            margin: 0;
+            font-size: 24px;
+            color: #333;
+        }
+
+        .filters {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .filter-form {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .filter-group input,
+        .filter-group select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .data-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+            white-space: nowrap;
+        }
+
+        .data-table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .data-table img {
+            max-width: 50px;
+            height: auto;
+            border-radius: 4px;
+        }
+
+        .stock-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .stock-critical {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .stock-low {
+            background-color: #ffc107;
+            color: #000;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-delivered {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .status-cancelled {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 12px;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+
+        .alert {
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            border: 1px solid transparent;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+
+        .alert-danger {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin-top: 20px;
+        }
+
+        .pagination-link {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            color: #333;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .pagination-link:hover {
+            background-color: #f8f9fa;
+        }
+
+        .pagination-link.active {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
     <div class="admin-container">
@@ -203,10 +443,14 @@ $categories = mysqli_fetch_all($categoriesResult, MYSQLI_ASSOC);
                                     <tr>
                                         <td><?php echo $product['id']; ?></td>
                                         <td>
-                                            <img src="../uploads/products/<?php echo $product['image']; ?>" alt="<?php echo $product['name']; ?>" width="50">
+                                            <?php if(!empty($product['image']) && file_exists("../uploads/products/{$product['image']}")): ?>
+                                                <img src="../uploads/products/<?php echo $product['image']; ?>" alt="<?php echo $product['name']; ?>" width="50">
+                                            <?php else: ?>
+                                                <img src="../uploads/products/no-image.png" alt="No Image" width="50">
+                                            <?php endif; ?>
                                         </td>
-                                        <td><?php echo $product['name']; ?></td>
-                                        <td><?php echo $product['category_name']; ?></td>
+                                        <td><?php echo htmlspecialchars($product['name']); ?></td>
+                                        <td><?php echo htmlspecialchars($product['category_name'] ?? 'Uncategorized'); ?></td>
                                         <td>₹<?php echo number_format($product['price'], 2); ?></td>
                                         <td>
                                             <?php if($product['stock_quantity'] <= 5): ?>
